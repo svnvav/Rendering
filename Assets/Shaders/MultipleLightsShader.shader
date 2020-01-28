@@ -1,8 +1,4 @@
-﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
-
-Shader "Custom/FirstLightingShader"
+﻿Shader "Custom/MultipleLigthsShader"
 {
     Properties
     {
@@ -26,7 +22,27 @@ Shader "Custom/FirstLightingShader"
             #pragma vertex MyVertexProgram
 			#pragma fragment MyFragmentProgram
 			
-			#include "UnityPBSLighting.cginc"
+			#include "MyLighting.cginc"
+            ENDCG
+        }
+        
+        Pass
+        {
+            Tags {
+				"LightMode" = "ForwardAdd"
+			}
+       
+            Blend One One
+            ZWrite Off
+       
+            CGPROGRAM
+            
+            #pragma target 3.0
+            
+            #pragma multi_compile DIRECTIONAL POINT
+            
+            #pragma vertex MyVertexProgram
+			#pragma fragment MyFragmentProgram
 			
 			#include "MyLighting.cginc"
             ENDCG

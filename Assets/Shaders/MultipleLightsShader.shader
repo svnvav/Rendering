@@ -24,6 +24,8 @@
             #pragma vertex MyVertexProgram
 			#pragma fragment MyFragmentProgram
 			
+			#define FORWARD_BASE_PASS
+			
 			#include "MyLighting.cginc"
             ENDCG
         }

@@ -73,16 +73,21 @@ Shader "Custom/FirstLightingShader"
                 albedo = DiffuseAndSpecularFromMetallic(
 					albedo, _Metallic, specularTint, oneMinusReflectivity
 				);
+				
+				UnityLight light;
+				light.color = lightColor;
+				light.dir = lightDir;
+				light.ndotl = DotClamped(i.normal, lightDir);
+				UnityIndirect indirectLight;
+				indirectLight.diffuse = 0;
+				indirectLight.specular = 0;
                 
-				float3 diffuse = albedo * lightColor * DotClamped(lightDir, i.normal);
-				
-				float3 halfVector = normalize(lightDir + viewDir);
-				float3 specular = specularTint * lightColor * pow(
-					DotClamped(halfVector, i.normal),
-					_Smoothness * 100
+				return UNITY_BRDF_PBS(
+					albedo, specularTint,
+					oneMinusReflectivity, _Smoothness,
+					i.normal, viewDir,
+					light, indirectLight
 				);
-				
-				return float4(diffuse + specular, 1);
 			}
             ENDCG
         }

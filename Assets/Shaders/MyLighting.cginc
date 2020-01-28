@@ -15,6 +15,10 @@ struct Interpolators {
     float2 uv : TEXCOORD0;
     float3 normal : TEXCOORD1;
     float3 worldPos : TEXCOORD2;
+    
+    #if defined(VERTEXLIGHT_ON)
+		float3 vertexLightColor : TEXCOORD3;
+	#endif
 };
 
 struct VertexData {
@@ -23,6 +27,17 @@ struct VertexData {
     float2 uv : TEXCOORD0;
 };
 
+void ComputeVertexLightColor (inout Interpolators i) {
+    #if defined(VERTEXLIGHT_ON)
+        i.vertexLightColor = Shade4PointLights(
+			unity_4LightPosX0, unity_4LightPosY0, unity_4LightPosZ0,
+			unity_LightColor[0].rgb, unity_LightColor[1].rgb,
+			unity_LightColor[2].rgb, unity_LightColor[3].rgb,
+			unity_4LightAtten0, i.worldPos, i.normal
+		);
+	#endif
+}
+
 Interpolators MyVertexProgram (VertexData v) {
     Interpolators i;
     i.position = UnityObjectToClipPos(v.position);
@@ -30,6 +45,7 @@ Interpolators MyVertexProgram (VertexData v) {
     i.uv = v.uv * _MainTex_ST.xy + _MainTex_ST.zw;
     i.normal = UnityObjectToWorldNormal(v.normal);
     i.normal = normalize(i.normal);
+    ComputeVertexLightColor(i);
     return i;
 }
 
@@ -48,6 +64,17 @@ UnityLight CreateLight (Interpolators i) {
 	return light;
 }
 
+UnityIndirect CreateIndirectLight (Interpolators i) {
+	UnityIndirect indirectLight;
+	indirectLight.diffuse = 0;
+	indirectLight.specular = 0;
+
+	#if defined(VERTEXLIGHT_ON)
+		indirectLight.diffuse = i.vertexLightColor;
+	#endif
+	return indirectLight;
+}
+
 float4 MyFragmentProgram (
     Interpolators i
 ): SV_TARGET {
@@ -62,9 +89,7 @@ float4 MyFragmentProgram (
         albedo, _Metallic, specularTint, oneMinusReflectivity
     );
     
-    UnityIndirect indirectLight;
-    indirectLight.diffuse = 0;
-    indirectLight.specular = 0;
+    UnityIndirect indirectLight = CreateIndirectLight(i);
     
     UnityLight light = CreateLight(i);
     

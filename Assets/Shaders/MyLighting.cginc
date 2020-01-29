@@ -16,16 +16,25 @@ struct Interpolators {
     float4 position : SV_POSITION;
     float4 uv : TEXCOORD0;
     float3 normal : TEXCOORD1;
-    float3 worldPos : TEXCOORD2;
+    
+    #if defined(BINORMAL_PER_FRAGMENT)
+		float4 tangent : TEXCOORD2;
+	#else
+		float3 tangent : TEXCOORD2;
+		float3 binormal : TEXCOORD3;
+	#endif
+	
+    float3 worldPos : TEXCOORD4;
     
     #if defined(VERTEXLIGHT_ON)
-		float3 vertexLightColor : TEXCOORD3;
+		float3 vertexLightColor : TEXCOORD5;
 	#endif
 };
 
 struct VertexData {
     float4 position : POSITION;
     float3 normal : NORMAL;
+    float4 tangent : TANGENT;
     float2 uv : TEXCOORD0;
 };
 
@@ -40,6 +49,11 @@ void ComputeVertexLightColor (inout Interpolators i) {
 	#endif
 }
 
+float3 CreateBinormal (float3 normal, float3 tangent, float binormalSign) {
+	return cross(normal, tangent.xyz) *
+		(binormalSign * unity_WorldTransformParams.w);
+}
+
 Interpolators MyVertexProgram (VertexData v) {
     Interpolators i;
     i.position = UnityObjectToClipPos(v.position);
@@ -47,6 +61,14 @@ Interpolators MyVertexProgram (VertexData v) {
     i.uv.xy = TRANSFORM_TEX(v.uv, _MainTex);
 	i.uv.zw = TRANSFORM_TEX(v.uv, _DetailTex);
     i.normal = UnityObjectToWorldNormal(v.normal);
+ 
+	#if defined(BINORMAL_PER_FRAGMENT)
+		i.tangent = float4(UnityObjectToWorldDir(v.tangent.xyz), v.tangent.w);
+	#else
+		i.tangent = UnityObjectToWorldDir(v.tangent.xyz);
+		i.binormal = CreateBinormal(i.normal, i.tangent, v.tangent.w);
+	#endif   
+    
     ComputeVertexLightColor(i);
     return i;
 }
@@ -87,8 +109,14 @@ void InitializeFragmentNormal(inout Interpolators i) {
 		UnpackScaleNormal(tex2D(_NormalMap, i.uv.xy), _BumpScale);
 	float3 detailNormal =
 		UnpackScaleNormal(tex2D(_DetailNormalMap, i.uv.zw), _DetailBumpScale);
-	i.normal = BlendNormals(mainNormal, detailNormal);
-	i.normal = i.normal.xzy;
+	float3 tangentSpaceNormal = BlendNormals(mainNormal, detailNormal);
+	float3 binormal = cross(i.normal, i.tangent.xyz) * (i.tangent.w * unity_WorldTransformParams.w);
+
+	i.normal = normalize(
+		tangentSpaceNormal.x * i.tangent +
+		tangentSpaceNormal.y * binormal +
+		tangentSpaceNormal.z * i.normal
+	);
 }
 
 float4 MyFragmentProgram (

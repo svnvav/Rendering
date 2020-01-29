@@ -110,7 +110,12 @@ void InitializeFragmentNormal(inout Interpolators i) {
 	float3 detailNormal =
 		UnpackScaleNormal(tex2D(_DetailNormalMap, i.uv.zw), _DetailBumpScale);
 	float3 tangentSpaceNormal = BlendNormals(mainNormal, detailNormal);
-	float3 binormal = cross(i.normal, i.tangent.xyz) * (i.tangent.w * unity_WorldTransformParams.w);
+	
+	#if defined(BINORMAL_PER_FRAGMENT)
+		float3 binormal = CreateBinormal(i.normal, i.tangent.xyz, i.tangent.w);
+	#else
+		float3 binormal = i.binormal;
+	#endif
 
 	i.normal = normalize(
 		tangentSpaceNormal.x * i.tangent +

@@ -12,6 +12,13 @@
         [NoScaleOffset] _DetailNormalMap ("Detail Normals", 2D) = "bump" {}
 		_DetailBumpScale ("Detail Bump Scale", Float) = 1
     }
+    
+    CGINCLUDE
+
+	#define BINORMAL_PER_FRAGMENT
+
+	ENDCG
+    
     SubShader
     {
         Pass
